@@ -6,21 +6,25 @@ import (
 	protocol "github.com/vito/gordon/protocol"
 )
 
-type Client struct {
+type Client interface {
+	List() (*protocol.ListResponse, error)
+}
+
+type WardenClient struct {
 	SocketPath string
 
 	connectionProvider ConnectionProvider
 	connection         chan *Connection
 }
 
-func NewClient(cp ConnectionProvider) *Client {
-	return &Client{
+func NewClient(cp ConnectionProvider) *WardenClient {
+	return &WardenClient{
 		connectionProvider: cp,
 		connection:         make(chan *Connection),
 	}
 }
 
-func (c *Client) Connect() error {
+func (c *WardenClient) Connect() error {
 	conn, err := c.connectionProvider.ProvideConnection()
 	if err != nil {
 		return err
@@ -31,59 +35,59 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-func (c *Client) Create() (*protocol.CreateResponse, error) {
+func (c *WardenClient) Create() (*protocol.CreateResponse, error) {
 	return (<-c.connection).Create()
 }
 
-func (c *Client) Destroy(handle string) (*protocol.DestroyResponse, error) {
+func (c *WardenClient) Destroy(handle string) (*protocol.DestroyResponse, error) {
 	return (<-c.connection).Destroy(handle)
 }
 
-func (c *Client) Spawn(handle, script string) (*protocol.SpawnResponse, error) {
+func (c *WardenClient) Spawn(handle, script string) (*protocol.SpawnResponse, error) {
 	return (<-c.connection).Spawn(handle, script)
 }
 
-func (c *Client) NetIn(handle string) (*protocol.NetInResponse, error) {
+func (c *WardenClient) NetIn(handle string) (*protocol.NetInResponse, error) {
 	return (<-c.connection).NetIn(handle)
 }
 
-func (c *Client) LimitMemory(handle string, limit uint64) (*protocol.LimitMemoryResponse, error) {
+func (c *WardenClient) LimitMemory(handle string, limit uint64) (*protocol.LimitMemoryResponse, error) {
 	return (<-c.connection).LimitMemory(handle, limit)
 }
 
-func (c *Client) GetMemoryLimit(handle string) (uint64, error) {
+func (c *WardenClient) GetMemoryLimit(handle string) (uint64, error) {
 	return (<-c.connection).GetMemoryLimit(handle)
 }
 
-func (c *Client) LimitDisk(handle string, limit uint64) (*protocol.LimitDiskResponse, error) {
+func (c *WardenClient) LimitDisk(handle string, limit uint64) (*protocol.LimitDiskResponse, error) {
 	return (<-c.connection).LimitDisk(handle, limit)
 }
 
-func (c *Client) GetDiskLimit(handle string) (uint64, error) {
+func (c *WardenClient) GetDiskLimit(handle string) (uint64, error) {
 	return (<-c.connection).GetDiskLimit(handle)
 }
 
-func (c *Client) List() (*protocol.ListResponse, error) {
+func (c *WardenClient) List() (*protocol.ListResponse, error) {
 	return (<-c.connection).List()
 }
 
-func (c *Client) Info(handle string) (*protocol.InfoResponse, error) {
+func (c *WardenClient) Info(handle string) (*protocol.InfoResponse, error) {
 	return (<-c.connection).Info(handle)
 }
 
-func (c *Client) CopyIn(handle, src, dst string) (*protocol.CopyInResponse, error) {
+func (c *WardenClient) CopyIn(handle, src, dst string) (*protocol.CopyInResponse, error) {
 	return c.acquireConnection().CopyIn(handle, src, dst)
 }
 
-func (c *Client) Stream(handle string, jobId uint32) (chan *protocol.StreamResponse, error) {
+func (c *WardenClient) Stream(handle string, jobId uint32) (chan *protocol.StreamResponse, error) {
 	return c.acquireConnection().Stream(handle, jobId)
 }
 
-func (c *Client) Run(handle, script string) (*protocol.RunResponse, error) {
+func (c *WardenClient) Run(handle, script string) (*protocol.RunResponse, error) {
 	return c.acquireConnection().Run(handle, script)
 }
 
-func (c *Client) serveConnections(conn *Connection) {
+func (c *WardenClient) serveConnections(conn *Connection) {
 	for stop := false; !stop; {
 		select {
 		case <-conn.disconnected:
@@ -97,7 +101,7 @@ func (c *Client) serveConnections(conn *Connection) {
 	go c.serveConnections(c.acquireConnection())
 }
 
-func (c *Client) acquireConnection() *Connection {
+func (c *WardenClient) acquireConnection() *Connection {
 	for {
 		conn, err := c.connectionProvider.ProvideConnection()
 		if err == nil {
