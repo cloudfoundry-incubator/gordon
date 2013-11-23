@@ -2,13 +2,16 @@ package warden
 
 import (
 	"bufio"
-	"code.google.com/p/goprotobuf/proto"
 	"errors"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
 	"sync"
+
+	"code.google.com/p/goprotobuf/proto"
+
+	protocol "github.com/vito/gordon/protocol"
 )
 
 type Connection struct {
@@ -54,63 +57,63 @@ func (c *Connection) Close() {
 	c.conn.Close()
 }
 
-func (c *Connection) Create() (*CreateResponse, error) {
-	res, err := c.roundTrip(&CreateRequest{}, &CreateResponse{})
+func (c *Connection) Create() (*protocol.CreateResponse, error) {
+	res, err := c.roundTrip(&protocol.CreateRequest{}, &protocol.CreateResponse{})
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*CreateResponse), nil
+	return res.(*protocol.CreateResponse), nil
 }
 
-func (c *Connection) Destroy(handle string) (*DestroyResponse, error) {
+func (c *Connection) Destroy(handle string) (*protocol.DestroyResponse, error) {
 	res, err := c.roundTrip(
-		&DestroyRequest{Handle: proto.String(handle)},
-		&DestroyResponse{},
+		&protocol.DestroyRequest{Handle: proto.String(handle)},
+		&protocol.DestroyResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*DestroyResponse), nil
+	return res.(*protocol.DestroyResponse), nil
 }
 
-func (c *Connection) Spawn(handle, script string) (*SpawnResponse, error) {
+func (c *Connection) Spawn(handle, script string) (*protocol.SpawnResponse, error) {
 	res, err := c.roundTrip(
-		&SpawnRequest{
+		&protocol.SpawnRequest{
 			Handle: proto.String(handle),
 			Script: proto.String(script),
 		},
-		&SpawnResponse{},
+		&protocol.SpawnResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*SpawnResponse), nil
+	return res.(*protocol.SpawnResponse), nil
 }
 
-func (c *Connection) Run(handle, script string) (*RunResponse, error) {
+func (c *Connection) Run(handle, script string) (*protocol.RunResponse, error) {
 	res, err := c.roundTrip(
-		&RunRequest{
+		&protocol.RunRequest{
 			Handle: proto.String(handle),
 			Script: proto.String(script),
 		},
-		&RunResponse{},
+		&protocol.RunResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*RunResponse), nil
+	return res.(*protocol.RunResponse), nil
 }
 
-func (c *Connection) Stream(handle string, jobId uint32) (chan *StreamResponse, error) {
+func (c *Connection) Stream(handle string, jobId uint32) (chan *protocol.StreamResponse, error) {
 	err := c.sendMessage(
-		&StreamRequest{
+		&protocol.StreamRequest{
 			Handle: proto.String(handle),
 			JobId:  proto.Uint32(jobId),
 		},
@@ -120,17 +123,17 @@ func (c *Connection) Stream(handle string, jobId uint32) (chan *StreamResponse, 
 		return nil, err
 	}
 
-	responses := make(chan *StreamResponse)
+	responses := make(chan *protocol.StreamResponse)
 
 	go func() {
 		for {
-			resMsg, err := c.readResponse(&StreamResponse{})
+			resMsg, err := c.readResponse(&protocol.StreamResponse{})
 			if err != nil {
 				close(responses)
 				break
 			}
 
-			response := resMsg.(*StreamResponse)
+			response := resMsg.(*protocol.StreamResponse)
 
 			responses <- response
 
@@ -144,48 +147,48 @@ func (c *Connection) Stream(handle string, jobId uint32) (chan *StreamResponse, 
 	return responses, nil
 }
 
-func (c *Connection) NetIn(handle string) (*NetInResponse, error) {
+func (c *Connection) NetIn(handle string) (*protocol.NetInResponse, error) {
 	res, err := c.roundTrip(
-		&NetInRequest{Handle: proto.String(handle)},
-		&NetInResponse{},
+		&protocol.NetInRequest{Handle: proto.String(handle)},
+		&protocol.NetInResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*NetInResponse), nil
+	return res.(*protocol.NetInResponse), nil
 }
 
-func (c *Connection) LimitMemory(handle string, limit uint64) (*LimitMemoryResponse, error) {
+func (c *Connection) LimitMemory(handle string, limit uint64) (*protocol.LimitMemoryResponse, error) {
 	res, err := c.roundTrip(
-		&LimitMemoryRequest{
+		&protocol.LimitMemoryRequest{
 			Handle:       proto.String(handle),
 			LimitInBytes: proto.Uint64(limit),
 		},
-		&LimitMemoryResponse{},
+		&protocol.LimitMemoryResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*LimitMemoryResponse), nil
+	return res.(*protocol.LimitMemoryResponse), nil
 }
 
 func (c *Connection) GetMemoryLimit(handle string) (uint64, error) {
 	res, err := c.roundTrip(
-		&LimitMemoryRequest{
+		&protocol.LimitMemoryRequest{
 			Handle: proto.String(handle),
 		},
-		&LimitMemoryResponse{},
+		&protocol.LimitMemoryResponse{},
 	)
 
 	if err != nil {
 		return 0, err
 	}
 
-	limit := res.(*LimitMemoryResponse).GetLimitInBytes()
+	limit := res.(*protocol.LimitMemoryResponse).GetLimitInBytes()
 	if limit == math.MaxInt64 { // PROBABLY NOT A LIMIT
 		return 0, nil
 	}
@@ -193,72 +196,75 @@ func (c *Connection) GetMemoryLimit(handle string) (uint64, error) {
 	return limit, nil
 }
 
-func (c *Connection) LimitDisk(handle string, limit uint64) (*LimitDiskResponse, error) {
+func (c *Connection) LimitDisk(handle string, limit uint64) (*protocol.LimitDiskResponse, error) {
 	res, err := c.roundTrip(
-		&LimitDiskRequest{
+		&protocol.LimitDiskRequest{
 			Handle:    proto.String(handle),
 			ByteLimit: proto.Uint64(limit),
 		},
-		&LimitDiskResponse{},
+		&protocol.LimitDiskResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*LimitDiskResponse), nil
+	return res.(*protocol.LimitDiskResponse), nil
 }
 
 func (c *Connection) GetDiskLimit(handle string) (uint64, error) {
 	res, err := c.roundTrip(
-		&LimitDiskRequest{
+		&protocol.LimitDiskRequest{
 			Handle: proto.String(handle),
 		},
-		&LimitDiskResponse{},
+		&protocol.LimitDiskResponse{},
 	)
 
 	if err != nil {
 		return 0, err
 	}
 
-	return res.(*LimitDiskResponse).GetByteLimit(), nil
+	return res.(*protocol.LimitDiskResponse).GetByteLimit(), nil
 }
 
-func (c *Connection) CopyIn(handle, src, dst string) (*CopyInResponse, error) {
+func (c *Connection) CopyIn(handle, src, dst string) (*protocol.CopyInResponse, error) {
 	res, err := c.roundTrip(
-		&CopyInRequest{
+		&protocol.CopyInRequest{
 			Handle:  proto.String(handle),
 			SrcPath: proto.String(src),
 			DstPath: proto.String(dst),
 		},
-		&CopyInResponse{},
+		&protocol.CopyInResponse{},
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*CopyInResponse), nil
+	return res.(*protocol.CopyInResponse), nil
 }
 
-func (c *Connection) List() (*ListResponse, error) {
-	res, err := c.roundTrip(&ListRequest{}, &ListResponse{})
+func (c *Connection) List() (*protocol.ListResponse, error) {
+	res, err := c.roundTrip(&protocol.ListRequest{}, &protocol.ListResponse{})
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*ListResponse), nil
+	return res.(*protocol.ListResponse), nil
 }
 
-func (c *Connection) Info(handle string) (*InfoResponse, error) {
-	res, err := c.roundTrip(&InfoRequest{
-		Handle: proto.String(handle),
-	}, &InfoResponse{})
+func (c *Connection) Info(handle string) (*protocol.InfoResponse, error) {
+	res, err := c.roundTrip(
+		&protocol.InfoRequest{
+			Handle: proto.String(handle),
+		},
+		&protocol.InfoResponse{},
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return res.(*InfoResponse), nil
+	return res.(*protocol.InfoResponse), nil
 }
 
 func (c *Connection) roundTrip(request proto.Message, response proto.Message) (proto.Message, error) {
@@ -284,8 +290,8 @@ func (c *Connection) sendMessage(req proto.Message) error {
 		return err
 	}
 
-	msg := &Message{
-		Type:    Message_Type(message2type(req)).Enum(),
+	msg := &protocol.Message{
+		Type:    protocol.Message_Type(message2type(req)).Enum(),
 		Payload: request,
 	}
 
@@ -319,15 +325,15 @@ func (c *Connection) readResponse(response proto.Message) (proto.Message, error)
 		return nil, err
 	}
 
-	message := &Message{}
+	message := &protocol.Message{}
 	err = proto.Unmarshal(payload, message)
 	if err != nil {
 		return nil, err
 	}
 
 	// error response from server
-	if message.GetType() == Message_Type(1) {
-		errorResponse := &ErrorResponse{}
+	if message.GetType() == protocol.Message_Type(1) {
+		errorResponse := &protocol.ErrorResponse{}
 		err = proto.Unmarshal(message.Payload, errorResponse)
 		if err != nil {
 			return nil, errors.New("error unmarshalling error!")
@@ -340,7 +346,7 @@ func (c *Connection) readResponse(response proto.Message) (proto.Message, error)
 		}
 	}
 
-	response_type := Message_Type(message2type(response))
+	response_type := protocol.Message_Type(message2type(response))
 	if message.GetType() != response_type {
 		return nil, errors.New(
 			fmt.Sprintf(
@@ -384,49 +390,49 @@ func (c *Connection) readPayload() ([]byte, error) {
 
 func message2type(msg proto.Message) int32 {
 	switch msg.(type) {
-	case *ErrorResponse:
+	case *protocol.ErrorResponse:
 		return 1
 
-	case *CreateRequest, *CreateResponse:
+	case *protocol.CreateRequest, *protocol.CreateResponse:
 		return 11
-	case *StopRequest, *StopResponse:
+	case *protocol.StopRequest, *protocol.StopResponse:
 		return 12
-	case *DestroyRequest, *DestroyResponse:
+	case *protocol.DestroyRequest, *protocol.DestroyResponse:
 		return 13
-	case *InfoRequest, *InfoResponse:
+	case *protocol.InfoRequest, *protocol.InfoResponse:
 		return 14
 
-	case *SpawnRequest, *SpawnResponse:
+	case *protocol.SpawnRequest, *protocol.SpawnResponse:
 		return 21
-	case *LinkRequest, *LinkResponse:
+	case *protocol.LinkRequest, *protocol.LinkResponse:
 		return 22
-	case *RunRequest, *RunResponse:
+	case *protocol.RunRequest, *protocol.RunResponse:
 		return 23
-	case *StreamRequest, *StreamResponse:
+	case *protocol.StreamRequest, *protocol.StreamResponse:
 		return 24
 
-	case *NetInRequest, *NetInResponse:
+	case *protocol.NetInRequest, *protocol.NetInResponse:
 		return 31
-	case *NetOutRequest, *NetOutResponse:
+	case *protocol.NetOutRequest, *protocol.NetOutResponse:
 		return 32
 
-	case *CopyInRequest, *CopyInResponse:
+	case *protocol.CopyInRequest, *protocol.CopyInResponse:
 		return 41
-	case *CopyOutRequest, *CopyOutResponse:
+	case *protocol.CopyOutRequest, *protocol.CopyOutResponse:
 		return 42
 
-	case *LimitMemoryRequest, *LimitMemoryResponse:
+	case *protocol.LimitMemoryRequest, *protocol.LimitMemoryResponse:
 		return 51
-	case *LimitDiskRequest, *LimitDiskResponse:
+	case *protocol.LimitDiskRequest, *protocol.LimitDiskResponse:
 		return 52
-	case *LimitBandwidthRequest, *LimitBandwidthResponse:
+	case *protocol.LimitBandwidthRequest, *protocol.LimitBandwidthResponse:
 		return 53
 
-	case *PingRequest, *PingResponse:
+	case *protocol.PingRequest, *protocol.PingResponse:
 		return 91
-	case *ListRequest, *ListResponse:
+	case *protocol.ListRequest, *protocol.ListResponse:
 		return 92
-	case *EchoRequest, *EchoResponse:
+	case *protocol.EchoRequest, *protocol.EchoResponse:
 		return 93
 	}
 

@@ -2,14 +2,17 @@ package warden
 
 import (
 	"bytes"
+	"math"
+
 	"code.google.com/p/goprotobuf/proto"
 	. "launchpad.net/gocheck"
-	"math"
+
+	protocol "github.com/vito/gordon/protocol"
 )
 
 func (w *WSuite) TestConnectionCreating(c *C) {
 	conn := &fakeConn{
-		ReadBuffer: messages(&CreateResponse{
+		ReadBuffer: messages(&protocol.CreateResponse{
 			Handle: proto.String("foohandle"),
 		}),
 
@@ -24,7 +27,7 @@ func (w *WSuite) TestConnectionCreating(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&CreateRequest{}).Bytes()),
+		string(messages(&protocol.CreateRequest{}).Bytes()),
 	)
 
 	c.Assert(resp.GetHandle(), Equals, "foohandle")
@@ -32,7 +35,7 @@ func (w *WSuite) TestConnectionCreating(c *C) {
 
 func (w *WSuite) TestConnectionDestroying(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&DestroyResponse{}),
+		ReadBuffer:  messages(&protocol.DestroyResponse{}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -44,13 +47,13 @@ func (w *WSuite) TestConnectionDestroying(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&DestroyRequest{Handle: proto.String("foo")}).Bytes()),
+		string(messages(&protocol.DestroyRequest{Handle: proto.String("foo")}).Bytes()),
 	)
 }
 
 func (w *WSuite) TestMemoryLimiting(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&LimitMemoryResponse{LimitInBytes: proto.Uint64(40)}),
+		ReadBuffer:  messages(&protocol.LimitMemoryResponse{LimitInBytes: proto.Uint64(40)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -66,7 +69,7 @@ func (w *WSuite) TestMemoryLimiting(c *C) {
 		Equals,
 		string(
 			messages(
-				&LimitMemoryRequest{
+				&protocol.LimitMemoryRequest{
 					Handle:       proto.String("foo"),
 					LimitInBytes: proto.Uint64(42),
 				},
@@ -77,7 +80,7 @@ func (w *WSuite) TestMemoryLimiting(c *C) {
 
 func (w *WSuite) TestGettingMemoryLimit(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&LimitMemoryResponse{LimitInBytes: proto.Uint64(40)}),
+		ReadBuffer:  messages(&protocol.LimitMemoryResponse{LimitInBytes: proto.Uint64(40)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -92,7 +95,7 @@ func (w *WSuite) TestGettingMemoryLimit(c *C) {
 		Equals,
 		string(
 			messages(
-				&LimitMemoryRequest{
+				&protocol.LimitMemoryRequest{
 					Handle: proto.String("foo"),
 				},
 			).Bytes(),
@@ -102,7 +105,7 @@ func (w *WSuite) TestGettingMemoryLimit(c *C) {
 
 func (w *WSuite) TestGettingMemoryLimitThatLooksFishy(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&LimitMemoryResponse{LimitInBytes: proto.Uint64(math.MaxInt64)}),
+		ReadBuffer:  messages(&protocol.LimitMemoryResponse{LimitInBytes: proto.Uint64(math.MaxInt64)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -117,7 +120,7 @@ func (w *WSuite) TestGettingMemoryLimitThatLooksFishy(c *C) {
 		Equals,
 		string(
 			messages(
-				&LimitMemoryRequest{
+				&protocol.LimitMemoryRequest{
 					Handle: proto.String("foo"),
 				},
 			).Bytes(),
@@ -127,7 +130,7 @@ func (w *WSuite) TestGettingMemoryLimitThatLooksFishy(c *C) {
 
 func (w *WSuite) TestDiskLimiting(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&LimitDiskResponse{ByteLimit: proto.Uint64(40)}),
+		ReadBuffer:  messages(&protocol.LimitDiskResponse{ByteLimit: proto.Uint64(40)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -143,7 +146,7 @@ func (w *WSuite) TestDiskLimiting(c *C) {
 		Equals,
 		string(
 			messages(
-				&LimitDiskRequest{
+				&protocol.LimitDiskRequest{
 					Handle:    proto.String("foo"),
 					ByteLimit: proto.Uint64(42),
 				},
@@ -154,7 +157,7 @@ func (w *WSuite) TestDiskLimiting(c *C) {
 
 func (w *WSuite) TestGettingDiskLimit(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&LimitDiskResponse{ByteLimit: proto.Uint64(40)}),
+		ReadBuffer:  messages(&protocol.LimitDiskResponse{ByteLimit: proto.Uint64(40)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -169,7 +172,7 @@ func (w *WSuite) TestGettingDiskLimit(c *C) {
 		Equals,
 		string(
 			messages(
-				&LimitDiskRequest{
+				&protocol.LimitDiskRequest{
 					Handle: proto.String("foo"),
 				},
 			).Bytes(),
@@ -179,7 +182,7 @@ func (w *WSuite) TestGettingDiskLimit(c *C) {
 
 func (w *WSuite) TestConnectionSpawn(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&SpawnResponse{JobId: proto.Uint32(42)}),
+		ReadBuffer:  messages(&protocol.SpawnResponse{JobId: proto.Uint32(42)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -191,7 +194,7 @@ func (w *WSuite) TestConnectionSpawn(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&SpawnRequest{
+		string(messages(&protocol.SpawnRequest{
 			Handle: proto.String("foo-handle"),
 			Script: proto.String("echo hi"),
 		}).Bytes()),
@@ -203,7 +206,7 @@ func (w *WSuite) TestConnectionSpawn(c *C) {
 func (w *WSuite) TestConnectionNetIn(c *C) {
 	conn := &fakeConn{
 		ReadBuffer: messages(
-			&NetInResponse{
+			&protocol.NetInResponse{
 				HostPort:      proto.Uint32(7331),
 				ContainerPort: proto.Uint32(7331),
 			},
@@ -219,7 +222,7 @@ func (w *WSuite) TestConnectionNetIn(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&NetInRequest{
+		string(messages(&protocol.NetInRequest{
 			Handle: proto.String("foo-handle"),
 		}).Bytes()),
 	)
@@ -231,7 +234,7 @@ func (w *WSuite) TestConnectionNetIn(c *C) {
 func (w *WSuite) TestConnectionList(c *C) {
 	conn := &fakeConn{
 		ReadBuffer: messages(
-			&ListResponse{
+			&protocol.ListResponse{
 				Handles: []string{"container1", "container2", "container3"},
 			},
 		),
@@ -246,7 +249,7 @@ func (w *WSuite) TestConnectionList(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&ListRequest{}).Bytes()),
+		string(messages(&protocol.ListRequest{}).Bytes()),
 	)
 
 	c.Assert(resp.GetHandles(), DeepEquals, []string{"container1", "container2", "container3"})
@@ -255,7 +258,7 @@ func (w *WSuite) TestConnectionList(c *C) {
 func (w *WSuite) TestConnectionInfo(c *C) {
 	conn := &fakeConn{
 		ReadBuffer: messages(
-			&InfoResponse{
+			&protocol.InfoResponse{
 				State: proto.String("active"),
 			},
 		),
@@ -270,7 +273,7 @@ func (w *WSuite) TestConnectionInfo(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&InfoRequest{
+		string(messages(&protocol.InfoRequest{
 			Handle: proto.String("handle"),
 		}).Bytes()),
 	)
@@ -280,7 +283,7 @@ func (w *WSuite) TestConnectionInfo(c *C) {
 
 func (w *WSuite) TestConnectionCopyIn(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&CopyInResponse{}),
+		ReadBuffer:  messages(&protocol.CopyInResponse{}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -292,7 +295,7 @@ func (w *WSuite) TestConnectionCopyIn(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&CopyInRequest{
+		string(messages(&protocol.CopyInRequest{
 			Handle:  proto.String("foo-handle"),
 			SrcPath: proto.String("/foo"),
 			DstPath: proto.String("/bar"),
@@ -302,7 +305,7 @@ func (w *WSuite) TestConnectionCopyIn(c *C) {
 
 func (w *WSuite) TestConnectionRun(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&RunResponse{ExitStatus: proto.Uint32(137)}),
+		ReadBuffer:  messages(&protocol.RunResponse{ExitStatus: proto.Uint32(137)}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 
@@ -314,7 +317,7 @@ func (w *WSuite) TestConnectionRun(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&RunRequest{
+		string(messages(&protocol.RunRequest{
 			Handle: proto.String("foo-handle"),
 			Script: proto.String("echo hi"),
 		}).Bytes()),
@@ -326,9 +329,9 @@ func (w *WSuite) TestConnectionRun(c *C) {
 func (w *WSuite) TestConnectionStream(c *C) {
 	conn := &fakeConn{
 		ReadBuffer: messages(
-			&StreamResponse{Name: proto.String("stdout"), Data: proto.String("1")},
-			&StreamResponse{Name: proto.String("stderr"), Data: proto.String("2")},
-			&StreamResponse{ExitStatus: proto.Uint32(3)},
+			&protocol.StreamResponse{Name: proto.String("stdout"), Data: proto.String("1")},
+			&protocol.StreamResponse{Name: proto.String("stderr"), Data: proto.String("2")},
+			&protocol.StreamResponse{ExitStatus: proto.Uint32(3)},
 		),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
@@ -341,7 +344,7 @@ func (w *WSuite) TestConnectionStream(c *C) {
 	c.Assert(
 		string(conn.WriteBuffer.Bytes()),
 		Equals,
-		string(messages(&StreamRequest{
+		string(messages(&protocol.StreamRequest{
 			Handle: proto.String("foo-handle"),
 			JobId:  proto.Uint32(42),
 		}).Bytes()),
@@ -362,7 +365,7 @@ func (w *WSuite) TestConnectionStream(c *C) {
 
 func (w *WSuite) TestConnectionError(c *C) {
 	conn := &fakeConn{
-		ReadBuffer:  messages(&ErrorResponse{Message: proto.String("boo")}),
+		ReadBuffer:  messages(&protocol.ErrorResponse{Message: proto.String("boo")}),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
 

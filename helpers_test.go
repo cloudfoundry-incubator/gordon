@@ -2,13 +2,16 @@ package warden
 
 import (
 	"bytes"
-	"code.google.com/p/goprotobuf/proto"
 	"errors"
 	"fmt"
-	. "launchpad.net/gocheck"
 	"net"
 	"testing"
 	"time"
+
+	"code.google.com/p/goprotobuf/proto"
+	. "launchpad.net/gocheck"
+
+	protocol "github.com/vito/gordon/protocol"
 )
 
 type WSuite struct{}
@@ -28,8 +31,8 @@ func messages(msgs ...proto.Message) *bytes.Buffer {
 			panic(err.Error())
 		}
 
-		message := &Message{
-			Type:    Message_Type(message2type(msg)).Enum(),
+		message := &protocol.Message{
+			Type:    protocol.Message_Type(message2type(msg)).Enum(),
 			Payload: payload,
 		}
 
