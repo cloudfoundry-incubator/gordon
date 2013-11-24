@@ -253,6 +253,22 @@ func (c *Connection) List() (*protocol.ListResponse, error) {
 	return res.(*protocol.ListResponse), nil
 }
 
+func (c *Connection) Link(handle string, jobId uint32) (*protocol.LinkResponse, error) {
+	res, err := c.roundTrip(
+		&protocol.LinkRequest{
+			Handle: proto.String(handle),
+			JobId:  proto.Uint32(jobId),
+		},
+		&protocol.LinkResponse{},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res.(*protocol.LinkResponse), nil
+}
+
 func (c *Connection) Info(handle string) (*protocol.InfoResponse, error) {
 	res, err := c.roundTrip(
 		&protocol.InfoRequest{

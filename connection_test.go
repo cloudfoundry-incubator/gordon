@@ -255,6 +255,40 @@ func (w *WSuite) TestConnectionList(c *C) {
 	c.Assert(resp.GetHandles(), DeepEquals, []string{"container1", "container2", "container3"})
 }
 
+func (w *WSuite) TestConnectionLink(c *C) {
+	conn := &fakeConn{
+		ReadBuffer: messages(
+			&protocol.LinkResponse{
+				ExitStatus: proto.Uint32(0),
+				Stdout:     proto.String("stdout output"),
+				Stderr:     proto.String("stderr output"),
+				Info: &protocol.InfoResponse{
+					State: proto.String("active"),
+				}},
+		),
+		WriteBuffer: bytes.NewBuffer([]byte{}),
+	}
+
+	connection := NewConnection(conn)
+
+	resp, err := connection.Link("handle", 1)
+	c.Assert(err, IsNil)
+
+	c.Assert(
+		string(conn.WriteBuffer.Bytes()),
+		Equals,
+		string(messages(&protocol.LinkRequest{
+			Handle: proto.String("handle"),
+			JobId:  proto.Uint32(1),
+		}).Bytes()),
+	)
+
+	c.Assert(resp.GetExitStatus(), Equals, uint32(0))
+	c.Assert(resp.GetStdout(), Equals, "stdout output")
+	c.Assert(resp.GetStderr(), Equals, "stderr output")
+	c.Assert(resp.GetInfo().GetState(), Equals, "active")
+}
+
 func (w *WSuite) TestConnectionInfo(c *C) {
 	conn := &fakeConn{
 		ReadBuffer: messages(

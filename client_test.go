@@ -215,6 +215,46 @@ func (w *WSuite) TestClientContainerInfo(c *C) {
 	)
 }
 
+func (w *WSuite) TestClientContainerLink(c *C) {
+	fcp := &FakeConnectionProvider{
+		ReadBuffer: messages(
+			&protocol.LinkResponse{
+				ExitStatus: proto.Uint32(0),
+				Stdout:     proto.String("stdout output"),
+				Stderr:     proto.String("stderr output"),
+				Info: &protocol.InfoResponse{
+					State: proto.String("active"),
+				}},
+		),
+		WriteBuffer: bytes.NewBuffer([]byte{}),
+	}
+
+	client := NewClient(fcp)
+
+	err := client.Connect()
+	c.Assert(err, IsNil)
+
+	res, err := client.Link("handle", 15)
+	c.Assert(err, IsNil)
+	c.Assert(res.GetStdout(), Equals, "stdout output")
+	c.Assert(res.GetStderr(), Equals, "stderr output")
+	c.Assert(res.GetExitStatus(), Equals, uint32(0))
+	c.Assert(res.GetInfo().GetState(), Equals, "active")
+
+	c.Assert(
+		string(fcp.WriteBuffer.Bytes()),
+		Equals,
+		string(
+			messages(
+				&protocol.LinkRequest{
+					Handle: proto.String("handle"),
+					JobId:  proto.Uint32(15),
+				},
+			).Bytes(),
+		),
+	)
+}
+
 func (w *WSuite) TestClientContainerList(c *C) {
 	fcp := &FakeConnectionProvider{
 		ReadBuffer: messages(

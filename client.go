@@ -13,6 +13,7 @@ type Client interface {
 	Destroy(handle string) (*protocol.DestroyResponse, error)
 
 	Spawn(handle, script string) (*protocol.SpawnResponse, error)
+	Link(handle string, jobId uint32) (*protocol.LinkResponse, error)
 }
 
 type WardenClient struct {
@@ -74,6 +75,10 @@ func (c *WardenClient) GetDiskLimit(handle string) (uint64, error) {
 
 func (c *WardenClient) List() (*protocol.ListResponse, error) {
 	return (<-c.connection).List()
+}
+
+func (c *WardenClient) Link(handle string, jobId uint32) (*protocol.LinkResponse, error) {
+	return (<-c.connection).Link(handle, jobId)
 }
 
 func (c *WardenClient) Info(handle string) (*protocol.InfoResponse, error) {
