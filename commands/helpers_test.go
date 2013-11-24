@@ -26,6 +26,11 @@ type FakeClient struct {
 
 	DestroyedHandle string
 	DestroyError    error
+
+	SpawnedHandle string
+	SpawnedScript string
+	SpawnJobId    uint32
+	SpawnError    error
 }
 
 func (client *FakeClient) List() (*protocol.ListResponse, error) {
@@ -46,6 +51,15 @@ func (client *FakeClient) Destroy(handle string) (*protocol.DestroyResponse, err
 	client.DestroyedHandle = handle
 	response := &protocol.DestroyResponse{}
 	return response, client.DestroyError
+}
+
+func (client *FakeClient) Spawn(handle, script string) (*protocol.SpawnResponse, error) {
+	client.SpawnedHandle = handle
+	client.SpawnedScript = script
+	response := &protocol.SpawnResponse{
+		JobId: &client.SpawnJobId,
+	}
+	return response, client.SpawnError
 }
 
 type FakeUI struct {

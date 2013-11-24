@@ -50,6 +50,20 @@ func main() {
 				status.Run()
 			},
 		},
+		{
+			Name:  "spawn",
+			Usage: "spawn a command in a container",
+			Flags: []cli.Flag{
+				cli.StringFlag{"handle", "", "handle of the container to destroy"},
+				cli.StringFlag{"script", "", "script to run in the container"},
+			},
+			Action: func(c *cli.Context) {
+				handle := c.String("handle")
+				script := c.String("script")
+				status := commands.NewSpawn(client(c), ui, handle, script)
+				status.Run()
+			},
+		},
 	}
 
 	app.Run(os.Args)
