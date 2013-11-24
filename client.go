@@ -8,6 +8,7 @@ import (
 
 type Client interface {
 	List() (*protocol.ListResponse, error)
+	Create() (*protocol.CreateResponse, error)
 }
 
 type WardenClient struct {

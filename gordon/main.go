@@ -30,6 +30,14 @@ func main() {
 				status.Run()
 			},
 		},
+		{
+			Name:  "create",
+			Usage: "create a container",
+			Action: func(c *cli.Context) {
+				status := commands.NewCreate(client(c), ui)
+				status.Run()
+			},
+		},
 	}
 
 	app.Run(os.Args)

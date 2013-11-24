@@ -20,6 +20,9 @@ func init() {
 type FakeClient struct {
 	ListHandles []string
 	ListError   error
+
+	CreateHandle string
+	CreateError  error
 }
 
 func (client *FakeClient) List() (*protocol.ListResponse, error) {
@@ -27,6 +30,13 @@ func (client *FakeClient) List() (*protocol.ListResponse, error) {
 		Handles: client.ListHandles,
 	}
 	return response, client.ListError
+}
+
+func (client *FakeClient) Create() (*protocol.CreateResponse, error) {
+	response := &protocol.CreateResponse{
+		Handle: &client.CreateHandle,
+	}
+	return response, client.CreateError
 }
 
 type FakeUI struct {
