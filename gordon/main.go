@@ -26,16 +26,16 @@ func main() {
 			Name:  "list",
 			Usage: "list running containers",
 			Action: func(c *cli.Context) {
-				status := commands.NewList(client(c), ui)
-				status.Run()
+				list := commands.NewList(client(c), ui)
+				list.Run()
 			},
 		},
 		{
 			Name:  "create",
 			Usage: "create a container",
 			Action: func(c *cli.Context) {
-				status := commands.NewCreate(client(c), ui)
-				status.Run()
+				create := commands.NewCreate(client(c), ui)
+				create.Run()
 			},
 		},
 		{
@@ -46,13 +46,13 @@ func main() {
 			},
 			Action: func(c *cli.Context) {
 				handle := c.String("handle")
-				status := commands.NewDestroy(client(c), ui, handle)
-				status.Run()
+				destroy := commands.NewDestroy(client(c), ui, handle)
+				destroy.Run()
 			},
 		},
 		{
 			Name:  "spawn",
-			Usage: "spawn a command in a container",
+			Usage: "spawn a job in a container",
 			Flags: []cli.Flag{
 				cli.StringFlag{"handle", "", "handle of the container to destroy"},
 				cli.StringFlag{"script", "", "script to run in the container"},
@@ -60,8 +60,10 @@ func main() {
 			Action: func(c *cli.Context) {
 				handle := c.String("handle")
 				script := c.String("script")
-				status := commands.NewSpawn(client(c), ui, handle, script)
-				status.Run()
+				spawn := commands.NewSpawn(client(c), ui, handle, script)
+				spawn.Run()
+			},
+		},
 		{
 			Name:  "link",
 			Usage: "link to a running job in a container",
