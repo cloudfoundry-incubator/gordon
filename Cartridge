@@ -1,0 +1,5 @@
+github.com/codegangsta/cli          master
+code.google.com/p/goprotobuf/proto  tip
+
+# Test
+launchpad.net/gocheck               last:1

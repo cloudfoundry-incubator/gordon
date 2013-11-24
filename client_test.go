@@ -2,10 +2,13 @@ package warden
 
 import (
 	"bytes"
-	"code.google.com/p/goprotobuf/proto"
 	"errors"
-	. "launchpad.net/gocheck"
 	"runtime"
+
+	"code.google.com/p/goprotobuf/proto"
+	. "launchpad.net/gocheck"
+
+	protocol "github.com/vito/gordon/protocol"
 )
 
 func (w *WSuite) TestClientConnectWithFailingProvider(c *C) {
@@ -24,8 +27,8 @@ func (w *WSuite) TestClientConnectWithSuccessfulProvider(c *C) {
 func (w *WSuite) TestClientContainerLifecycle(c *C) {
 	fcp := &FakeConnectionProvider{
 		ReadBuffer: messages(
-			&CreateResponse{Handle: proto.String("foo")},
-			&DestroyResponse{},
+			&protocol.CreateResponse{Handle: proto.String("foo")},
+			&protocol.DestroyResponse{},
 		),
 		WriteBuffer: bytes.NewBuffer([]byte{}),
 	}
@@ -47,8 +50,8 @@ func (w *WSuite) TestClientContainerLifecycle(c *C) {
 		Equals,
 		string(
 			messages(
-				&CreateRequest{},
-				&DestroyRequest{Handle: proto.String("foo")},
+				&protocol.CreateRequest{},
+				&protocol.DestroyRequest{Handle: proto.String("foo")},
 			).Bytes(),
 		),
 	)
@@ -61,12 +64,12 @@ func (w *WSuite) TestClientSpawnAndStreaming(c *C) {
 	mcp := &ManyConnectionProvider{
 		ReadBuffers: []*bytes.Buffer{
 			messages(
-				&SpawnResponse{
+				&protocol.SpawnResponse{
 					JobId: proto.Uint32(42),
 				},
 			),
 			messages(
-				&StreamResponse{
+				&protocol.StreamResponse{
 					Name: proto.String("stdout"),
 					Data: proto.String("some data for stdout"),
 				},
@@ -94,7 +97,7 @@ func (w *WSuite) TestClientSpawnAndStreaming(c *C) {
 		Equals,
 		string(
 			messages(
-				&SpawnRequest{
+				&protocol.SpawnRequest{
 					Handle: proto.String("foo"),
 					Script: proto.String("echo some data for stdout"),
 				},
@@ -107,7 +110,10 @@ func (w *WSuite) TestClientSpawnAndStreaming(c *C) {
 		Equals,
 		string(
 			messages(
-				&StreamRequest{Handle: proto.String("foo"), JobId: proto.Uint32(42)},
+				&protocol.StreamRequest{
+					Handle: proto.String("foo"),
+					JobId:  proto.Uint32(42),
+				},
 			).Bytes(),
 		),
 	)
@@ -124,10 +130,10 @@ func (w *WSuite) TestClientRunningAndDestroying(c *C) {
 	mcp := &ManyConnectionProvider{
 		ReadBuffers: []*bytes.Buffer{
 			messages(
-				&DestroyResponse{},
+				&protocol.DestroyResponse{},
 			),
 			messages(
-				&RunResponse{
+				&protocol.RunResponse{
 					ExitStatus: proto.Uint32(255),
 				},
 			),
@@ -156,7 +162,7 @@ func (w *WSuite) TestClientRunningAndDestroying(c *C) {
 		Equals,
 		string(
 			messages(
-				&DestroyRequest{
+				&protocol.DestroyRequest{
 					Handle: proto.String("foo"),
 				},
 			).Bytes(),
@@ -168,7 +174,7 @@ func (w *WSuite) TestClientRunningAndDestroying(c *C) {
 		Equals,
 		string(
 			messages(
-				&RunRequest{
+				&protocol.RunRequest{
 					Handle: proto.String("foo"),
 					Script: proto.String("echo hi"),
 				},
@@ -180,7 +186,7 @@ func (w *WSuite) TestClientRunningAndDestroying(c *C) {
 func (w *WSuite) TestClientContainerInfo(c *C) {
 	fcp := &FakeConnectionProvider{
 		ReadBuffer: messages(
-			&InfoResponse{
+			&protocol.InfoResponse{
 				State: proto.String("stopped"),
 			},
 		),
@@ -201,8 +207,48 @@ func (w *WSuite) TestClientContainerInfo(c *C) {
 		Equals,
 		string(
 			messages(
-				&InfoRequest{
+				&protocol.InfoRequest{
 					Handle: proto.String("handle"),
+				},
+			).Bytes(),
+		),
+	)
+}
+
+func (w *WSuite) TestClientContainerLink(c *C) {
+	fcp := &FakeConnectionProvider{
+		ReadBuffer: messages(
+			&protocol.LinkResponse{
+				ExitStatus: proto.Uint32(0),
+				Stdout:     proto.String("stdout output"),
+				Stderr:     proto.String("stderr output"),
+				Info: &protocol.InfoResponse{
+					State: proto.String("active"),
+				}},
+		),
+		WriteBuffer: bytes.NewBuffer([]byte{}),
+	}
+
+	client := NewClient(fcp)
+
+	err := client.Connect()
+	c.Assert(err, IsNil)
+
+	res, err := client.Link("handle", 15)
+	c.Assert(err, IsNil)
+	c.Assert(res.GetStdout(), Equals, "stdout output")
+	c.Assert(res.GetStderr(), Equals, "stderr output")
+	c.Assert(res.GetExitStatus(), Equals, uint32(0))
+	c.Assert(res.GetInfo().GetState(), Equals, "active")
+
+	c.Assert(
+		string(fcp.WriteBuffer.Bytes()),
+		Equals,
+		string(
+			messages(
+				&protocol.LinkRequest{
+					Handle: proto.String("handle"),
+					JobId:  proto.Uint32(15),
 				},
 			).Bytes(),
 		),
@@ -212,7 +258,7 @@ func (w *WSuite) TestClientContainerInfo(c *C) {
 func (w *WSuite) TestClientContainerList(c *C) {
 	fcp := &FakeConnectionProvider{
 		ReadBuffer: messages(
-			&ListResponse{
+			&protocol.ListResponse{
 				Handles: []string{"container1", "container6"},
 			},
 		),
@@ -233,7 +279,7 @@ func (w *WSuite) TestClientContainerList(c *C) {
 		Equals,
 		string(
 			messages(
-				&ListRequest{},
+				&protocol.ListRequest{},
 			).Bytes(),
 		),
 	)
@@ -245,8 +291,8 @@ func (w *WSuite) TestClientCopyingInAndDestroying(c *C) {
 
 	mcp := &ManyConnectionProvider{
 		ReadBuffers: []*bytes.Buffer{
-			messages(&DestroyResponse{}),
-			messages(&CopyInResponse{}),
+			messages(&protocol.DestroyResponse{}),
+			messages(&protocol.CopyInResponse{}),
 		},
 		WriteBuffers: []*bytes.Buffer{
 			firstWriteBuf,
@@ -270,7 +316,7 @@ func (w *WSuite) TestClientCopyingInAndDestroying(c *C) {
 		Equals,
 		string(
 			messages(
-				&DestroyRequest{
+				&protocol.DestroyRequest{
 					Handle: proto.String("foo"),
 				},
 			).Bytes(),
@@ -282,7 +328,7 @@ func (w *WSuite) TestClientCopyingInAndDestroying(c *C) {
 		Equals,
 		string(
 			messages(
-				&CopyInRequest{
+				&protocol.CopyInRequest{
 					Handle:  proto.String("foo"),
 					SrcPath: proto.String("/foo"),
 					DstPath: proto.String("/bar"),
@@ -299,12 +345,12 @@ func (w *WSuite) TestClientReconnects(c *C) {
 	mcp := &ManyConnectionProvider{
 		ReadBuffers: []*bytes.Buffer{
 			messages(
-				&CreateResponse{Handle: proto.String("handle a")},
+				&protocol.CreateResponse{Handle: proto.String("handle a")},
 				// no response for Create #2
 			),
 			messages(
-				&DestroyResponse{},
-				&DestroyResponse{},
+				&protocol.DestroyResponse{},
+				&protocol.DestroyResponse{},
 			),
 		},
 		WriteBuffers: []*bytes.Buffer{
@@ -334,7 +380,10 @@ func (w *WSuite) TestClientReconnects(c *C) {
 	c.Assert(
 		string(firstWriteBuf.Bytes()),
 		Equals,
-		string(messages(&CreateRequest{}, &CreateRequest{}).Bytes()),
+		string(messages(
+			&protocol.CreateRequest{},
+			&protocol.CreateRequest{}).Bytes(),
+		),
 	)
 
 	c.Assert(
@@ -342,7 +391,7 @@ func (w *WSuite) TestClientReconnects(c *C) {
 		Equals,
 		string(
 			messages(
-				&DestroyRequest{
+				&protocol.DestroyRequest{
 					Handle: proto.String("handle a"),
 				},
 			).Bytes(),
