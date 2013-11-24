@@ -38,6 +38,18 @@ func main() {
 				status.Run()
 			},
 		},
+		{
+			Name:  "destroy",
+			Usage: "destroy a container",
+			Flags: []cli.Flag{
+				cli.StringFlag{"handle", "", "handle of the container to destroy"},
+			},
+			Action: func(c *cli.Context) {
+				handle := c.String("handle")
+				status := commands.NewDestroy(client(c), ui, handle)
+				status.Run()
+			},
+		},
 	}
 
 	app.Run(os.Args)

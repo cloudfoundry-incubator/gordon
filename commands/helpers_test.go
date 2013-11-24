@@ -23,6 +23,9 @@ type FakeClient struct {
 
 	CreateHandle string
 	CreateError  error
+
+	DestroyedHandle string
+	DestroyError    error
 }
 
 func (client *FakeClient) List() (*protocol.ListResponse, error) {
@@ -37,6 +40,12 @@ func (client *FakeClient) Create() (*protocol.CreateResponse, error) {
 		Handle: &client.CreateHandle,
 	}
 	return response, client.CreateError
+}
+
+func (client *FakeClient) Destroy(handle string) (*protocol.DestroyResponse, error) {
+	client.DestroyedHandle = handle
+	response := &protocol.DestroyResponse{}
+	return response, client.DestroyError
 }
 
 type FakeUI struct {
