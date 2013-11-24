@@ -62,6 +62,18 @@ func main() {
 				script := c.String("script")
 				status := commands.NewSpawn(client(c), ui, handle, script)
 				status.Run()
+		{
+			Name:  "link",
+			Usage: "link to a running job in a container",
+			Flags: []cli.Flag{
+				cli.StringFlag{"handle", "", "handle of the container to destroy"},
+				cli.StringFlag{"job", "", "job id to attach"},
+			},
+			Action: func(c *cli.Context) {
+				handle := c.String("handle")
+				jobId := c.Int("job")
+				link := commands.NewLink(client(c), ui, handle, uint32(jobId))
+				link.Run()
 			},
 		},
 	}

@@ -31,6 +31,13 @@ type FakeClient struct {
 	SpawnedScript string
 	SpawnJobId    uint32
 	SpawnError    error
+
+	LinkedHandle   string
+	LinkedJobId    uint32
+	LinkStdout     string
+	LinkStderr     string
+	LinkExitStatus uint32
+	LinkError      error
 }
 
 func (client *FakeClient) List() (*protocol.ListResponse, error) {
@@ -60,6 +67,18 @@ func (client *FakeClient) Spawn(handle, script string) (*protocol.SpawnResponse,
 		JobId: &client.SpawnJobId,
 	}
 	return response, client.SpawnError
+}
+
+func (client *FakeClient) Link(handle string, jobId uint32) (*protocol.LinkResponse, error) {
+	client.LinkedHandle = handle
+	client.LinkedJobId = jobId
+
+	response := &protocol.LinkResponse{
+		ExitStatus: &client.LinkExitStatus,
+		Stdout:     &client.LinkStdout,
+		Stderr:     &client.LinkStderr,
+	}
+	return response, client.LinkError
 }
 
 type FakeUI struct {
